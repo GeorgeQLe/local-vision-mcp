@@ -1,0 +1,4 @@
+# Optional GPU access; this does NOT impose a VRAM cap.
+services:
+  ollama:
+    gpus: all

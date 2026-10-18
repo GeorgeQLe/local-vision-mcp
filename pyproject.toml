@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "local-vision-mcp"
+version = "0.1.0"
+description = "Local screenshot, video, audio and music perception for agents over MCP"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "George Le" }]
+keywords = ["mcp", "model-context-protocol", "vision", "ollama", "ocr", "audio", "agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.10"
+dependencies = ["mcp>=1.12,<2", "httpx>=0.27,<1", "pillow>=11,<13"]
+
+[project.urls]
+Homepage = "https://github.com/GeorgeQLe/local-vision-mcp"
+Issues = "https://github.com/GeorgeQLe/local-vision-mcp/issues"
+
+[project.optional-dependencies]
+omni = ["transformers>=4.53,<5", "torch>=2.6", "accelerate>=1", "qwen-omni-utils>=0.0.8", "soundfile>=0.13", "torchvision>=0.21", "audioread>=3"]
+bench = ["psutil>=7,<8"]
+dev = ["pytest>=8", "ruff>=0.11"]
+
+[project.scripts]
+local-vision-mcp = "local_vision_mcp.server:main"
+local-vision-setup = "local_vision_mcp.setup:main"
+local-vision-bench = "local_vision_mcp.benchmark.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

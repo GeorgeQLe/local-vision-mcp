@@ -1,0 +1,9 @@
+{
+  "models": [
+    {"name": "qwen3.5:2b", "backend": "ollama", "kinds": ["image", "video"]},
+    {"name": "qwen3.5:4b", "backend": "ollama", "kinds": ["image", "video"]},
+    {"name": "qwen3-vl:4b", "backend": "ollama", "kinds": ["image", "video"]},
+    {"name": "gemma4:e2b", "backend": "ollama", "kinds": ["image", "video"]},
+    {"name": "Qwen/Qwen2.5-Omni-3B", "backend": "omni", "kinds": ["image", "video", "audio"]}
+  ]
+}
