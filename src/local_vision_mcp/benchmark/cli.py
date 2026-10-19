@@ -67,6 +67,9 @@ def container_info(name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
+    from .suite import add_commands, dispatch
+
+    add_commands(sub)
     fixtures = sub.add_parser("fixtures", help="Create deterministic synthetic test media")
     fixtures.add_argument("--output", type=Path, required=True)
     fixtures.add_argument("--seed", type=int, default=42)
@@ -103,6 +106,11 @@ def main():
         "--container", help="Record actual Docker limits/image of the dedicated inference container"
     )
     args = parser.parse_args()
+    if args.command in ("compare", "demo"):
+        try:
+            return dispatch(args)
+        except (ValueError, OSError, RuntimeError) as exc:
+            parser.exit(2, f"Benchmark error: {exc}\n")
     if args.command == "fixtures":
         if args.output.exists() and any(args.output.iterdir()):
             parser.error("Fixture output must be empty to preserve existing datasets")

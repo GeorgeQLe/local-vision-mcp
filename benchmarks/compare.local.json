@@ -1,0 +1,5 @@
+{
+  "models": [
+    {"name": "Qwen 3.5 4B", "backend": "ollama", "model": "qwen3.5:4b"}
+  ]
+}

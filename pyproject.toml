@@ -31,7 +31,7 @@ Issues = "https://github.com/GeorgeQLe/local-vision-mcp/issues"
 
 [project.optional-dependencies]
 omni = ["transformers>=4.53,<5", "torch>=2.6", "accelerate>=1", "qwen-omni-utils>=0.0.8", "soundfile>=0.13", "torchvision>=0.21", "audioread>=3"]
-bench = ["psutil>=7,<8"]
+bench = ["psutil>=7,<8", "rich>=14,<15"]
 dev = ["pytest>=8", "ruff>=0.11"]
 
 [project.scripts]

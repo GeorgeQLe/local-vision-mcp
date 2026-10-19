@@ -150,6 +150,19 @@ Paths must resolve inside `LOCAL_VISION_ROOTS` (default: process working directo
 
 ## Benchmarks
 
+For live progress, ETA, correctness and cost estimates across local models and native Codex/Claude
+CLI sessions, see the [CLI benchmark suite and TUI](docs/benchmark-cli.md). Preview it without
+calling models:
+
+```bash
+uv sync --extra bench
+uv run local-vision-bench demo --output benchmarks/results/demo-01 --tui
+```
+
+For hosted-model comparisons, consensus experiments, and native-vision fallback, see the
+[perception parity evaluation plan](docs/perception-parity.md). The existing runner below measures
+local models and load; it does not yet run hosted providers or consensus policies.
+
 `local-vision-bench` (install with `uv sync --extra bench`) generates deterministic synthetic media and runs model × worker × agent-count matrices through the same queue the MCP server uses. It never downloads models.
 
 ```bash
