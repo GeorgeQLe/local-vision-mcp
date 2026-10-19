@@ -1,0 +1,8 @@
+{
+  "name": "local-vision",
+  "version": "0.1.0",
+  "description": "Local image, video and audio perception with managed runtimes and recoverable jobs.",
+  "author": {"name": "George Le"},
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

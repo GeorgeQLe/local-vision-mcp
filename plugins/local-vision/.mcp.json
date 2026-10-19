@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "local-vision": {
+      "command": "python3",
+      "args": ["-c", "import os,runpy; from pathlib import Path; p=Path(os.environ.get('LOCAL_VISION_HOME', str(Path(os.environ.get('XDG_DATA_HOME', str(Path.home()/'.local/share')))/'local-vision-mcp')))/'control/launcher.py'; runpy.run_path(str(p),run_name='__main__')"],
+      "env_vars": ["LOCAL_VISION_HOME", "LOCAL_VISION_CONFIG", "LOCAL_VISION_ROOTS", "LOCAL_VISION_RUNTIME_DIR"]
+    }
+  }
+}

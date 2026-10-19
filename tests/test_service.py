@@ -69,6 +69,13 @@ def test_disabled_audio(service, screenshot):
         service.analyze(str(screenshot), "Listen", "audio")
 
 
+def test_inference_waits_for_update(service, screenshot):
+    service.runtime.job = {"state": "running", "action": "update"}
+    with pytest.raises(RuntimeError, match="update in progress"):
+        service.analyze(str(screenshot), "Read", "image")
+    assert service.pool.status()["active"] == 0
+
+
 def test_video_and_audio_real_ffmpeg(service, tmp_path, monkeypatch):
     video = tmp_path / "test.mp4"
     subprocess.run(
@@ -139,6 +146,11 @@ def test_stdio_mcp_roundtrip(tmp_path):
                 "analyze_video",
                 "analyze_audio",
                 "local_media_status",
+                "local_media_manage",
+                "submit_media_job",
+                "get_media_job",
+                "cancel_media_job",
+                "verify_local_media",
             }
             result = await client.call_tool("local_media_status", {})
             assert not result.isError

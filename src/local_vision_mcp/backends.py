@@ -81,8 +81,8 @@ class Ollama:
                 return data["message"]["content"]
         except httpx.HTTPError as exc:
             raise RuntimeError(
-                f"Ollama unavailable or model not ready. Start ollama serve and "
-                f"ollama pull {self.model}. Details: {exc}"
+                f"Ollama unavailable or model not ready. Call local_media_manage(action='ensure') "
+                f"and poll local_media_status for completion. Details: {exc}"
                 + (
                     f"; {exc.response.text[:1000]}"
                     if isinstance(exc, httpx.HTTPStatusError)
