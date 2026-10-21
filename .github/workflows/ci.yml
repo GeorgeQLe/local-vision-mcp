@@ -27,7 +27,13 @@ jobs:
       - run: uv sync --locked --extra dev --extra bench
       - run: uv run ruff check src tests scripts
       - run: uv run ruff format --check src tests scripts
-      - run: uv run pytest -q
+      - run: uv run pytest -q --basetemp "$RUNNER_TEMP/pytest"
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-logs-${{ matrix.os }}-${{ matrix.python-version }}
+          path: ${{ runner.temp }}/pytest/**/*.log
+          if-no-files-found: ignore
       - name: Installed package acceptance
         run: uv run local-vision --home "$RUNNER_TEMP/local-vision" install --root "$GITHUB_WORKSPACE"
       - name: Bootstrap script acceptance

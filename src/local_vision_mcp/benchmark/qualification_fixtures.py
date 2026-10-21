@@ -39,6 +39,13 @@ SCHEMAS = dict(
 )
 
 
+def truetype(name, size):
+    try:
+        return ImageFont.truetype(name, size)
+    except OSError:
+        return ImageFont.load_default(size=size)
+
+
 def generate(output, *, seed, per_task=32, split="screening"):
     if not 1 <= per_task <= 100:
         raise ValueError("per_task must be between 1 and 100")
@@ -57,8 +64,8 @@ def generate(output, *, seed, per_task=32, split="screening"):
             background = "#ffffff" if task == TASKS[1] else backgrounds[family % 4]
             image = Image.new("RGB", (width, height), background)
             draw = ImageDraw.Draw(image)
-            font = ImageFont.truetype(fonts[family % 3], rng.choice((28, 32, 36)))
-            small = ImageFont.truetype(fonts[family % 3], 22)
+            font = truetype(fonts[family % 3], rng.choice((28, 32, 36)))
+            small = truetype(fonts[family % 3], 22)
             x = rng.randrange(45, 160) if family % 2 else width // 3
             y = rng.randrange(100, 210)
             draw.rectangle((0, 0, width, 65), fill="#303030" if task == TASKS[1] else "#183153")
