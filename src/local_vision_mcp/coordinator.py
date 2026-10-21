@@ -32,6 +32,7 @@ class MediaRequest(BaseModel):
     frames: int = Field(default=6, ge=1, le=12)
     include_audio: bool = False
     crop: list[int] | None = None
+    response_schema: dict | None = None
 
 
 def digest_file(path):
@@ -171,6 +172,11 @@ class Coordinator:
             request = payload["request"]
             if kind == "analyze":
                 request = MediaRequest.model_validate(request).model_dump()
+                from .structured import prepare_schema
+
+                schema = prepare_schema(request.pop("response_schema"))
+                if schema is not None:
+                    request["response_schema"] = schema
                 source = media.local_file(request["path"], self.service.roots)
                 request["path"] = str(source)
                 request["media_sha256"] = digest_file(source)
@@ -270,6 +276,7 @@ class RemoteService(SharedClient):
         frames=6,
         include_audio=False,
         crop=None,
+        response_schema=None,
     ):
         import asyncio
 
@@ -283,6 +290,7 @@ class RemoteService(SharedClient):
             "frames": frames,
             "include_audio": include_audio,
             "crop": crop,
+            "response_schema": response_schema,
         }
         job = await asyncio.to_thread(self.submit_job, request, uuid.uuid4().hex)
         while job["state"] not in TERMINAL:
