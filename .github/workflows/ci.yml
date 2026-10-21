@@ -27,6 +27,24 @@ jobs:
       - run: uv sync --locked --extra dev --extra bench
       - run: uv run ruff check src tests scripts
       - run: uv run ruff format --check src tests scripts
+      - name: Diagnose macOS startup (temporary)
+        if: runner.os == 'macOS'
+        run: |
+          uv run python - <<'EOF'
+          import socket, sys, time, sysconfig
+          print(sys.executable, sys.version, sysconfig.get_config_var("prefix"))
+          for host in ("127.0.0.1", "localhost"):
+              t = time.monotonic(); name = socket.getfqdn(host)
+              print(f"getfqdn({host}) -> {name} in {time.monotonic() - t:.2f}s")
+          from http.server import HTTPServer, BaseHTTPRequestHandler
+          t = time.monotonic(); HTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler).server_close()
+          print(f"HTTPServer bind in {time.monotonic() - t:.2f}s")
+          import subprocess
+          t = time.monotonic(); subprocess.run([sys.executable, "-c", "pass"], check=True)
+          print(f"child interpreter in {time.monotonic() - t:.2f}s")
+          t = time.monotonic(); import local_vision_mcp.server  # noqa
+          print(f"import server in {time.monotonic() - t:.2f}s")
+          EOF
       - run: uv run pytest -q --basetemp "$RUNNER_TEMP/pytest"
       - if: failure()
         uses: actions/upload-artifact@v4
