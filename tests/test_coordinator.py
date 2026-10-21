@@ -5,10 +5,11 @@ import signal
 import sys
 import threading
 import time
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 
 import pytest
 from agentic_mcp_foundation import LifecycleError
+from agentic_mcp_foundation.transport import LoopbackServer
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from PIL import Image
@@ -55,7 +56,7 @@ def backend():
             else:
                 self.wfile.write(b'{"status":"success"}\n')
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server = LoopbackServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     yield f"http://127.0.0.1:{server.server_port}", calls
