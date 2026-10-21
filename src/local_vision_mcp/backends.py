@@ -1,5 +1,6 @@
 import base64
 import io
+import json
 import math
 import threading
 from pathlib import Path
@@ -42,7 +43,17 @@ class Ollama:
     def last_metrics(self) -> dict:
         return getattr(self.metrics, "value", {})
 
-    def analyze(self, prompt: str, images: list[bytes], tokens: int) -> str:
+    def analyze(
+        self, prompt: str, images: list[bytes], tokens: int, response_schema: dict | None = None
+    ) -> str:
+        if response_schema is not None:
+            from .structured import prepare_schema
+
+            response_schema = prepare_schema(response_schema)
+            prompt += (
+                "\nReturn only one JSON object. Do not use Markdown or code fences. "
+                "Match this output schema: " + json.dumps(response_schema)
+            )
         try:
             with httpx.Client(timeout=self.timeout, trust_env=False) as client:
                 response = client.post(
@@ -50,6 +61,7 @@ class Ollama:
                     json={
                         "model": self.model,
                         "stream": False,
+                        **({"format": response_schema} if response_schema is not None else {}),
                         "think": self.think,
                         "keep_alive": self.keep_alive,
                         "messages": [

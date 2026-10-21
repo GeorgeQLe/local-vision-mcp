@@ -5,10 +5,11 @@ import signal
 import sys
 import threading
 import time
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 
 import pytest
 from agentic_mcp_foundation import LifecycleError
+from agentic_mcp_foundation.transport import LoopbackServer
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from PIL import Image
@@ -39,7 +40,15 @@ def backend():
                 if "wait-for-loss" in json.dumps(request):
                     time.sleep(2)
                 try:
-                    self.wfile.write(b'{"message":{"content":"red"}}')
+                    self.wfile.write(
+                        json.dumps(
+                            {
+                                "message": {
+                                    "content": '{"count":2}' if request.get("format") else "red"
+                                }
+                            }
+                        ).encode()
+                    )
                 except BrokenPipeError:
                     pass
             elif self.path == "/api/show":
@@ -47,7 +56,7 @@ def backend():
             else:
                 self.wfile.write(b'{"status":"success"}\n')
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    server = LoopbackServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     yield f"http://127.0.0.1:{server.server_port}", calls
@@ -99,6 +108,29 @@ def test_local_vision_reconnect_receipt_media_identity_and_probe(tmp_path, backe
             replay = await client.call_tool("submit_media_job", request)
             assert json.loads(replay.content[0].text)["id"] == job["id"]
             assert len(calls) == 1
+            schema = {
+                "type": "object",
+                "properties": {"count": {"type": "integer"}},
+                "required": ["count"],
+                "additionalProperties": False,
+            }
+            structured = await client.call_tool(
+                "submit_media_job",
+                {**request, "idempotency_key": "structured", "response_schema": schema},
+            )
+            structured_job = json.loads(structured.content[0].text)
+            structured_result = (await wait(client, structured_job["id"]))["result"]
+            assert structured_result["output_validation"]["valid"]
+            assert calls[-1]["format"] == schema
+            conflict_schema = await client.call_tool(
+                "submit_media_job",
+                {
+                    **request,
+                    "idempotency_key": "structured",
+                    "response_schema": {**schema, "required": []},
+                },
+            )
+            assert conflict_schema.isError
             status = await client.call_tool("local_media_status", {})
             data = json.loads(status.content[0].text)
             assert data["capabilities"]["image"]["ready"]

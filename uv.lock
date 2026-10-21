@@ -37,7 +37,7 @@ wheels = [
 [[package]]
 name = "agentic-mcp-foundation"
 version = "0.1.0"
-source = { git = "https://github.com/GeorgeQLe/agentic-mcp-foundation.git?rev=4f28f324205499d0229190c1843a4af9679622ff#4f28f324205499d0229190c1843a4af9679622ff" }
+source = { git = "https://github.com/GeorgeQLe/agentic-mcp-foundation.git?rev=d68e532e2ae6b89c058d48d607892a2f897fc478#d68e532e2ae6b89c058d48d607892a2f897fc478" }
 dependencies = [
     { name = "httpx" },
 ]
@@ -1057,6 +1057,7 @@ source = { editable = "." }
 dependencies = [
     { name = "agentic-mcp-foundation" },
     { name = "httpx" },
+    { name = "jsonschema" },
     { name = "mcp" },
     { name = "pillow" },
     { name = "zstandard" },
@@ -1084,9 +1085,10 @@ omni = [
 [package.metadata]
 requires-dist = [
     { name = "accelerate", marker = "extra == 'omni'", specifier = ">=1" },
-    { name = "agentic-mcp-foundation", git = "https://github.com/GeorgeQLe/agentic-mcp-foundation.git?rev=4f28f324205499d0229190c1843a4af9679622ff" },
+    { name = "agentic-mcp-foundation", git = "https://github.com/GeorgeQLe/agentic-mcp-foundation.git?rev=d68e532e2ae6b89c058d48d607892a2f897fc478" },
     { name = "audioread", marker = "extra == 'omni'", specifier = ">=3" },
     { name = "httpx", specifier = ">=0.27,<1" },
+    { name = "jsonschema", specifier = ">=4.23,<5" },
     { name = "mcp", specifier = ">=1.12,<2" },
     { name = "pillow", specifier = ">=11,<13" },
     { name = "psutil", marker = "extra == 'bench'", specifier = ">=7,<8" },

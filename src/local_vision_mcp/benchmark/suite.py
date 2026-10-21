@@ -9,8 +9,9 @@ import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 
+from ..structured import validate_answer
 from .dashboard import Dashboard, aggregate
-from .providers import Provider, token_cost
+from .providers import make_provider, token_cost
 from .runner import load_manifest
 from .scoring import score
 
@@ -77,6 +78,26 @@ def load_models(path):
         if model["name"] in names:
             raise ValueError("Model names must be unique")
         names.add(model["name"])
+        if model.get("perception", "native") not in ("native", "mcp", "shadow"):
+            raise ValueError("perception must be native, mcp or shadow")
+        if model.get("local_strategy", "single") not in ("single", "consensus"):
+            raise ValueError("local_strategy must be single or consensus")
+        if model.get("local_strategy") == "consensus" and model.get("perception") != "mcp":
+            raise ValueError("Consensus requires MCP perception")
+        if model.get("perception") == "mcp" and (
+            model["backend"] not in ("codex", "claude")
+            or not isinstance(model.get("local_model"), str)
+            or not model["local_model"].strip()
+        ):
+            raise ValueError("MCP perception requires a CLI backend and local_model")
+        if model.get("perception") == "shadow" and (
+            model["backend"] not in ("codex", "claude")
+            or not isinstance(model.get("local_model"), str)
+            or not isinstance(model.get("routing_policy"), str)
+        ):
+            raise ValueError("Shadow requires a native CLI, local_model and routing_policy")
+        if "structured_output" in model and type(model["structured_output"]) is not bool:
+            raise ValueError("structured_output must be boolean")
         for mapping in (model.get("pricing", {}), model.get("estimated_tokens", {})):
             if not isinstance(mapping, dict):
                 raise ValueError("Invalid pricing/estimated_tokens: expected JSON objects")  # noqa: TRY004
@@ -195,12 +216,23 @@ def evaluate(provider, model, case, repeat):
     }
     # Rubric and fixture generator metadata never cross the provider boundary.
     public_case = {
-        key: case[key] for key in ("path", "sha256", "question", "kind", "request") if key in case
+        key: case[key]
+        for key in ("path", "sha256", "question", "kind", "request", "routing_task")
+        if key in case
     }
     try:
         result = provider.analyze(public_case)
+        schema = case.get("request", {}).get("response_schema")
+        if schema is not None:
+            result["output_validation"] = validate_answer(
+                result["answer"], schema, truncated=result.get("truncated", False)
+            )
         row.update(result)
         row["grade"] = score(result["answer"], case["rubric"])
+        if result.get("error"):
+            row["grade"].update(passed=False, score=0.0, reason="provider_error")
+        if result.get("output_validation", {}).get("valid") is False:
+            row["grade"].update(passed=False, reason="output_contract_rejected")
         if result.get("truncated"):
             row["grade"].update(passed=False, reason="truncated_answer")
     except Exception as exc:  # noqa: BLE001 — isolate model failures and preserve partial results
@@ -225,7 +257,7 @@ def run_suite(
     max_cost=None,
     min_accuracy=0.9,
     tui="auto",
-    provider_factory=Provider,
+    provider_factory=make_provider,
     demo=False,
 ):
     if output.exists() and any(output.iterdir()):
@@ -484,7 +516,7 @@ def dispatch(args):
     root = args.manifest.parent.resolve()
 
     def factory(model, _root, timeout, stop):
-        return Provider(model, root, timeout, stop)
+        return make_provider(model, root, timeout, stop)
 
     code = run_suite(
         models,

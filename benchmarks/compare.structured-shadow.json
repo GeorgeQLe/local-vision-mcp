@@ -1,0 +1,46 @@
+{
+  "models": [
+    {
+      "name": "Codex native",
+      "backend": "codex",
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "perception": "native"
+    },
+    {
+      "name": "Claude native",
+      "backend": "claude",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "perception": "native"
+    },
+    {
+      "name": "Codex native with local shadow",
+      "backend": "codex",
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "perception": "shadow",
+      "local_model": "qwen3.5:4b",
+      "url": "http://127.0.0.1:11435",
+      "ollama_options": {
+        "num_ctx": 16384,
+        "temperature": 0
+      },
+      "routing_policy": "benchmarks/routing.policy.json"
+    },
+    {
+      "name": "Claude native with local shadow",
+      "backend": "claude",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "perception": "shadow",
+      "local_model": "qwen3.5:4b",
+      "url": "http://127.0.0.1:11435",
+      "ollama_options": {
+        "num_ctx": 16384,
+        "temperature": 0
+      },
+      "routing_policy": "benchmarks/routing.policy.json"
+    }
+  ]
+}

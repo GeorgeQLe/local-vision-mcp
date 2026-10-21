@@ -6,12 +6,13 @@ import sys
 import tarfile
 import threading
 import time
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 
 import httpx
 import pytest
 import zstandard
 from agentic_mcp_foundation import processes
+from agentic_mcp_foundation.transport import LoopbackServer
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -192,12 +193,13 @@ def test_owned_process_starts_and_stops(runtime, tmp_path, monkeypatch):
     script.write_text(
         f"#!{sys.executable}\n"
         "import http.server, os, urllib.parse\n"
+        "from agentic_mcp_foundation.transport import LoopbackServer\n"
         "class Handler(http.server.BaseHTTPRequestHandler):\n"
         " def do_GET(self):\n"
         "  self.send_response(200); self.end_headers(); "
         'self.wfile.write(b\'{"version":"test"}\')\n'
         "url = urllib.parse.urlparse(os.environ['OLLAMA_HOST'])\n"
-        "http.server.HTTPServer((url.hostname, url.port), Handler).serve_forever()\n"
+        "LoopbackServer((url.hostname, url.port), Handler).serve_forever()\n"
     )
     script.chmod(0o755)
     runtime.url = f"http://127.0.0.1:{port}"
@@ -234,7 +236,7 @@ def test_management_tool_roundtrip(tmp_path):
             self.end_headers()
             self.wfile.write(b'{"status":"success"}\n')
 
-    backend = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    backend = LoopbackServer(("127.0.0.1", 0), Handler)
     thread = threading.Thread(target=backend.serve_forever, daemon=True)
     thread.start()
     config = tmp_path / "config.json"

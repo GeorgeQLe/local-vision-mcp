@@ -16,3 +16,19 @@ Use `submit_media_job` for long or reconnect-sensitive analysis. Choose `kind`, 
 Crop screenshots before resizing when text is small. Video uses sparse frames; inspect additional intervals when events may be missed. Audio requires cached Omni weights and FFmpeg. Paths must be inside configured media roots; change root configuration through the host rather than asking tools to bypass it.
 
 Escalate to direct inspection when the local answer is uncertain or lacks task-critical detail. A successful `verify_local_media` color probe establishes basic vision operation only. Do not claim broader accuracy or speed without workload benchmark evidence.
+
+
+Until task/model/input-specific qualification is recorded, use the host's native
+vision for default work. Explicit local analysis requests and authorized local
+benchmarks or shadow audits may use these tools. For the currently evaluated
+Qwen 3.5 4B, clear large text, simple separated-object counts and explicit visible
+fields are shadow candidates. Use native for tiny exact identifiers, dense-table
+row selection, optional-field absence decisions and temporal reasoning. Local
+consensus is not a validated escalation path.
+
+For structured extraction with Ollama, supply `response_schema` with required
+fields and types; make unreadable values nullable. Check `output_validation` and
+`truncated`. Reject invalid output rather than guessing keys or repairing values.
+Schema-valid output remains fallible visual evidence and does not qualify a route.
+Video coverage and model interpretation are separate: resample missing intervals
+before relying on event claims; native vision cannot recover unsupplied frames.
