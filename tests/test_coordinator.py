@@ -131,8 +131,13 @@ def test_different_roots_cannot_recover_each_others_jobs(tmp_path):
         second.service.close()
 
 
-def test_dead_coordinator_recovery_preserves_results_without_replay(tmp_path, backend):
+def test_dead_coordinator_recovery_preserves_results_without_replay(tmp_path, backend, monkeypatch):
     url, calls = backend
+    # SIGKILL skips the coordinator's TemporaryDirectory cleanup; keep its
+    # orphaned media snapshot inside pytest's managed tmp_path, not $TMPDIR.
+    coordinator_tmp = tmp_path / "coordinator-tmp"
+    coordinator_tmp.mkdir()
+    monkeypatch.setenv("TMPDIR", str(coordinator_tmp))
     config = recommend({"ram_gb": 8, "cuda_vram_gb": 0})
     config["ollama_url"] = url
     first = RemoteService(config, (tmp_path,))
