@@ -1,32 +1,14 @@
 # Production readiness and deferred benchmarks
 
+> Completed items are archived monthly in `todo-history/`.
+
+## Needs George (todo audit 2026-11-05)
+
+- "Publish and enable the prepared Linux/macOS CI workflow": a CI workflow is on open, unmerged PR #1 (benchmarks-ci-ollama-0406, CI run passed 2026-10-21); main has no .github/workflows. Merge PR #1 to close this, or is it still blocked?
+
 Benchmark testing is paused at the user's request. Resume explicitly; do not launch hosted-model
 runs or long local benchmarks automatically. The CLI/TUI implementation is saved, but the small
 smoke tests below do **not** establish perception parity or production readiness.
-
-## Evidence already collected
-
-- [x] Implement `local-vision-bench compare` and simulated `demo`, with a live TUI, plain CI output,
-  shared labeled cases, deterministic correctness, latency, token usage and estimated costs.
-- [x] Add Ollama/Omni and native Codex/Claude Code adapters, model configuration examples,
-  per-category reports, partial-result checkpoints, deadlines and a soft cost dispatch guard.
-- [x] Full unrestricted test run: 50 passed. Subsequent cost-normalization edits were checked with
-  the 12 comparison tests and Ruff; repeat the full suite before a release.
-- [x] Build the source distribution and wheel successfully.
-- [x] Exercise the simulated TUI in a real terminal.
-- [x] Local Qwen 3.5 4B: two cases passed (about 37.9s and 18.3s).
-- [x] Native GPT 6.1 Sol and Claude Fable 5.1: one OCR case each passed (about 6.0s and 3.6s),
-  with identical prepared-image hashes and returned token usage. Claude reported an API-equivalent
-  estimate of about $0.1097; Codex cost remained unknown without configured rates. These are
-  connectivity checks, not a representative model comparison or subscription invoice.
-
-Local artifacts, intentionally git-ignored:
-
-- `benchmarks/results/cli-local-smoke-01/`
-- `benchmarks/results/cli-native-smoke-01/`
-- `/tmp/local-vision-tui-demo/` (temporary; may disappear)
-
-See [CLI usage](docs/benchmark-cli.md) and [evaluation/routing design](docs/perception-parity.md).
 
 ## Resume the benchmark campaign
 
