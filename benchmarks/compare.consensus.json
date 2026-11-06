@@ -1,0 +1,70 @@
+{
+  "models": [
+    {
+      "name": "Codex GPT 6.1 Sol native",
+      "backend": "codex",
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "perception": "native"
+    },
+    {
+      "name": "Codex GPT 6.1 Sol mcp",
+      "backend": "codex",
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "perception": "mcp",
+      "local_model": "qwen3.5:4b",
+      "url": "http://127.0.0.1:11435",
+      "ollama_options": {
+        "num_ctx": 8192
+      }
+    },
+    {
+      "name": "Codex GPT 6.1 Sol consensus",
+      "backend": "codex",
+      "model": "gpt-6.1-sol",
+      "effort": "medium",
+      "perception": "mcp",
+      "local_model": "qwen3.5:4b",
+      "url": "http://127.0.0.1:11435",
+      "ollama_options": {
+        "num_ctx": 8192
+      },
+      "local_strategy": "consensus",
+      "consensus_peer_url": "http://127.0.0.1:11436"
+    },
+    {
+      "name": "Claude Opus 5.5 native",
+      "backend": "claude",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "perception": "native"
+    },
+    {
+      "name": "Claude Opus 5.5 mcp",
+      "backend": "claude",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "perception": "mcp",
+      "local_model": "qwen3.5:4b",
+      "url": "http://127.0.0.1:11435",
+      "ollama_options": {
+        "num_ctx": 8192
+      }
+    },
+    {
+      "name": "Claude Opus 5.5 consensus",
+      "backend": "claude",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "perception": "mcp",
+      "local_model": "qwen3.5:4b",
+      "url": "http://127.0.0.1:11435",
+      "ollama_options": {
+        "num_ctx": 8192
+      },
+      "local_strategy": "consensus",
+      "consensus_peer_url": "http://127.0.0.1:11436"
+    }
+  ]
+}

@@ -52,6 +52,16 @@ def test_path_symlink_escape(service, tmp_path):
         service.analyze(str(link), "Read", "image")
 
 
+def test_runtime_token_limit_is_truncation_even_for_short_valid_json(
+    service, screenshot, monkeypatch
+):
+    monkeypatch.setattr(service.vision, "analyze", lambda *args: '{"value":1}')
+    monkeypatch.setattr(service.vision, "last_metrics", lambda: {"done_reason": "length"})
+    result = service.analyze(str(screenshot), "Read value", "image", 64)
+    assert result["answer"] == '{"value":1}'
+    assert result["truncated"] is True
+
+
 def test_invalid_bounds(service, screenshot):
     with pytest.raises(ValueError, match="max_tokens"):
         service.analyze(str(screenshot), "Read", "image", 9000)
@@ -181,3 +191,25 @@ def test_ollama_request_contract(monkeypatch):
     assert Ollama("test", "http://localhost:11434").analyze("Describe", [b"image"], 128) == (
         "A red rectangle."
     )
+
+
+def test_service_validates_schema_without_repairing_answer(service, screenshot, monkeypatch):
+    schema = {
+        "type": "object",
+        "properties": {"count": {"type": "integer"}},
+        "required": ["count"],
+        "additionalProperties": False,
+    }
+
+    def infer(prompt, images, tokens, response_schema):
+        assert response_schema == schema
+        return '{"count":"2"}'
+
+    monkeypatch.setattr(service.vision, "analyze", infer)
+    result = service.analyze(str(screenshot), "Count", "image", response_schema=schema)
+    assert result["answer"] == '{"count":"2"}'
+    assert result["output_validation"] == {"valid": False, "reason": "schema_mismatch"}
+    with pytest.raises(ValueError, match="requires the Ollama"):
+        service.analyze(
+            str(screenshot), "Count", "image", include_audio=True, response_schema=schema
+        )

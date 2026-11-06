@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "status": "screening_only_no_promotion",
+  "model": "qwen3.5:4b",
+  "model_digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+  "context_tokens": 16384,
+  "temperature": 0,
+  "thinking": false,
+  "output_tokens": 128,
+  "seed": 2026102003,
+  "cases_per_task": 32,
+  "synthetic_layout_families": 8,
+  "dispatch_seed": 42,
+  "parallel_sessions": 1,
+  "repeats": 1,
+  "development": "Video pilot, seed 2026102001 and interrupted seed 2026102002.",
+  "screening": "Fresh seed 2026102003, synthetic and generator-related; not independent real-source qualification.",
+  "arms": [
+    "local unconstrained",
+    "local schema request plus grounding prompt",
+    "Codex native",
+    "Claude native"
+  ],
+  "public_contract": "Caller-defined nullable fields and types. No expected values, const or gold enums. Native receives the same contract in its prompt. Unconstrained local retains the question but omits the schema request and grounding instruction.",
+  "scoring": "Identical strict JSON/schema validation and exact-field correctness for all arms; no key repair, no host correction, reject length stops.",
+  "shadow_workflow": {
+    "cases": 16,
+    "selection": "First four frozen cases in each screening category, fixed before results.",
+    "arms": [
+      "Codex native",
+      "Claude native",
+      "Codex with local shadow",
+      "Claude with local shadow"
+    ],
+    "route": "Current conservative policy: native primary in every case; optional matching-model image shadow. Local runs first; native sees original pixels and no shadow text.",
+    "metrics": [
+      "final correctness",
+      "shadow correctness",
+      "local and hosted tokens separately",
+      "native calls",
+      "accepted-local count",
+      "local failures",
+      "end-to-end latency"
+    ],
+    "interpretation": "This measures current shadow overhead, not a qualified local-accepting router. No claim of savings from zero hosted tokens on direct-local arms."
+  },
+  "decision": "Do not modify prompts, schemas, routing or scoring after screening starts. Preserve failures for future models. No production promotion without independent quality and paired end-to-end efficiency gates.",
+  "supersedes": "structured-output.protocol.json",
+  "amendment": "Original seed 2026102002 is development only after count/header ambiguity was found. Fresh replacement seed 2026102003 has neutral count-scene decorations and explicit object boundary. Freeze before inference."
+}

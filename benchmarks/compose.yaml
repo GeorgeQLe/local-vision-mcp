@@ -1,7 +1,7 @@
 # A dedicated backend: limits apply to inference, not merely the benchmark client.
 services:
   ollama:
-    image: ${BENCH_OLLAMA_IMAGE:-ollama/ollama:latest}
+    image: ${BENCH_OLLAMA_IMAGE:-ollama/ollama:0.40.6}
     container_name: local-vision-bench-ollama
     ports:
       - "127.0.0.1:${BENCH_PORT:-11435}:11434"

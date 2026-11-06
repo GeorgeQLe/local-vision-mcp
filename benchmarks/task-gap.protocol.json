@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "status": "proposed_qualification_protocol_not_active_router",
+  "reference_model": "qwen3.5:4b",
+  "reference_suites": [
+    {
+      "fixture_seed": 20261019,
+      "variants": 3,
+      "images_only": true,
+      "config": "benchmarks/compare.agent-efficiency.json"
+    },
+    {
+      "fixture_seed": 2026101902,
+      "variants": 2,
+      "images_only": true,
+      "config": "benchmarks/compare.consensus.json"
+    }
+  ],
+  "local_candidates_for_shadow_testing": [
+    "clear_large_text_ocr",
+    "small_separated_object_counting",
+    "explicit_visible_labeled_fields",
+    "simple_table_comparison_with_schema_validation"
+  ],
+  "current_native_defaults": [
+    "tiny_exact_identifiers",
+    "dense_table_exact_row_extraction",
+    "optional_field_presence_or_absence",
+    "ambiguous_labels_or_incomplete_coverage",
+    "outside_qualified_input_envelope"
+  ],
+  "evaluation_splits": ["observed_regression", "development", "hidden_source_disjoint"],
+  "difficulty_axes": [
+    "font_size", "text_density", "contrast", "blur", "crop_boundary",
+    "rotation", "table_rows_columns", "object_count", "occlusion",
+    "adjacent_confusing_labels", "field_present_absent", "layout_source"
+  ],
+  "proposed_promotion_targets": {
+    "accepted_local_exact_accuracy_min": 0.99,
+    "one_sided_confidence_level": 0.95,
+    "accepted_local_accuracy_lower_bound_min": 0.99,
+    "example_independent_zero_failure_trials": 300,
+    "hosted_token_reduction_fraction_min": 0.2,
+    "paired_quality_loss_margin": "predefine per task and severity before evaluation",
+    "minimum_local_coverage": "predefine per workload before evaluation",
+    "latency_budget": "predefine per workflow before evaluation"
+  },
+  "router_may_use": [
+    "requested_operation", "available_input_properties", "supplied_region_and_labels",
+    "output_schema", "truncation", "coverage", "external_domain_validation"
+  ],
+  "router_must_not_use": [
+    "hidden_rubric", "ground_truth", "posthoc_case_success",
+    "unavailable_evaluator_category", "unvalidated_model_confidence_or_vote_agreement"
+  ],
+  "required_metrics": [
+    "first_local_exact_accuracy", "format_and_truncation_failures",
+    "semantic_field_errors", "abstention_errors", "accepted_local_accuracy",
+    "local_coverage", "missed_escalations", "avoidable_escalations",
+    "fallback_frequency", "final_hybrid_accuracy", "paired_native_quality_loss",
+    "hosted_input_output_cache_tokens", "native_image_uploads",
+    "separate_local_tokens_and_calls", "end_to_end_median_p95_seconds",
+    "memory_footprint", "runtime_errors"
+  ],
+  "qualification_fingerprint": [
+    "model_digest", "quantization", "runtime_version", "hardware",
+    "prompt_hash", "schema_version", "crop_resize_policy_hash",
+    "router_policy_hash", "manifest_hash", "native_host_configuration"
+  ]
+}

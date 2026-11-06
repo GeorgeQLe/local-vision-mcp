@@ -343,6 +343,9 @@ class Runtime:
             if self.process.poll() is not None:
                 raise RuntimeError(f"Ollama exited; see {self.directory / 'ollama.log'}")
             if self.version() is not None:
+                # Re-record once serving: a wrapper or interpreter that re-execs itself
+                # (python.org macOS builds do) changes the executable after launch.
+                processes.remember(self.directory / "ollama-owner.json", self.process)
                 return
             time.sleep(0.25)
         self.stop()

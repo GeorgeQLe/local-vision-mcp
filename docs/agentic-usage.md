@@ -74,6 +74,15 @@ path. Explicit job submission is preferable when the caller needs to retain an I
 tool response or disconnect. Receipts retain questions, paths and text results on local disk; no
 automatic retention/deletion policy is implemented. Raw snapshots and extracted audio are temporary.
 
+## Structured extraction
+
+Image and silent-video requests on Ollama accept an optional `response_schema`
+JSON object schema. Durable jobs include it in request identity. The result adds
+`output_validation`; reject invalid or truncated output and retain native as the
+default until task-specific qualification exists. See the [output contract and
+benchmark protocol](structured-output-benchmark.md) for an example, limits and
+runtime caveats. Validation checks structure, not visual correctness.
+
 ## Doctor, recovery and stop
 
 When MCP cannot start, the host agent can diagnose the stable payload without importing MCP:

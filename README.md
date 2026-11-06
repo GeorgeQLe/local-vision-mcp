@@ -91,6 +91,21 @@ Other config keys: `ollama_url`, `ollama_options` (passed to Ollama, e.g. `num_c
 
 Ollama keeps its model warm for five minutes; Omni loads lazily and stays resident in the shared coordinator until it exits. If both backends consume too much GPU memory, use one Omni backend, move Omni to CPU, or unload Ollama with `ollama stop MODEL` before switching workloads. No automatic runtime quantization or model eviction is implemented.
 
+## Current routing boundary
+
+Native vision remains the default. Current local models have promising narrow
+image tasks, but no task/model route is qualified for automatic acceptance and
+end-to-end hosted-token savings have not been demonstrated. Use local inference
+for explicit requests or authorized shadow tests. Tiny exact identifiers,
+dense-table row selection, optional-field absence and temporal reasoning stay
+native. Local consensus is not the default fallback.
+
+For Ollama extraction, image and silent-video tools accept `response_schema`;
+check the returned `output_validation` and `truncated` before using an observation.
+Valid JSON alone does not establish visual correctness. See the
+[structured-output implementation and screening](docs/structured-output-benchmark.md)
+and [task qualification policy](docs/vision-task-routing.md).
+
 ## Connect an MCP client
 
 Use an absolute checkout/config path so client working directories do not change behavior. Set allowed media directories explicitly. On Linux/macOS, separate multiple roots with `:` (Windows uses `;`).
@@ -173,19 +188,32 @@ uv run local-vision-bench run --manifest benchmarks/generated/my-set/manifest.js
 uv run local-vision-bench run --manifest ... --matrix benchmarks/candidates.json --output ...
 ```
 
-Reports (`report.md`, `report.json`, `requests.jsonl`) record pass rate, p95 latency and runtime details. A configuration only qualifies when it meets the pass-rate, latency and sample thresholds with zero errors. `benchmarks/compose.yaml` runs Ollama in a CPU- and RAM-limited container (`BENCH_CPUS`, `BENCH_RAM`, `BENCH_PARALLEL`, `BENCH_PORT`); add `compose.gpu.yaml` for GPU access (no VRAM cap). Pass `--container local-vision-bench-ollama --ollama-url http://127.0.0.1:11435` to record the container's limits. Generated fixtures and results are git-ignored.
+Reports (`report.md`, `report.json`, `requests.jsonl`) record pass rate, p95 latency and runtime details. A configuration only qualifies when it meets the pass-rate, latency and sample thresholds with zero errors. `benchmarks/compose.yaml` runs Ollama in a CPU- and RAM-limited container (`BENCH_CPUS`, `BENCH_RAM`, `BENCH_PARALLEL`, `BENCH_PORT`; the image is pinned to `ollama/ollama:0.40.6`, override with `BENCH_OLLAMA_IMAGE`); add `compose.gpu.yaml` for GPU access (no VRAM cap). Pass `--container local-vision-bench-ollama --ollama-url http://127.0.0.1:11435` to record the container's limits. Generated fixtures and results are git-ignored.
 
 Results so far (synthetic diagnostic set, 10 image/video cases × 3 repeats; not a general ranking):
 
-| Model | Hardware | Agents | Pass | p95 seconds |
-| --- | --- | --- | --- | --- |
-| qwen3.5:4b | RTX 2080 Super 8 GiB | 1 / 4 | 70% / 70% | 38 / 41 |
-| qwen3.5:2b | RTX 2080 Super 8 GiB | 1 / 4 | 50% / 50% | 42 / 54 |
-| qwen3-vl:4b | RTX 2080 Super 8 GiB | 1 / 4 | 37% / 13% (22 errors) | 88 / 144 |
+| Model | Ollama | Hardware | Agents | Pass | p95 seconds |
+| --- | --- | --- | --- | --- | --- |
+| gemma4:e2b | 0.40.6 | RTX 2080 Super 8 GiB | 1 / 4 | 90% / 90% | 4.5 / 4.0 |
+| qwen3.5:4b | 0.40.6 | RTX 2080 Super 8 GiB | 1 / 4 | 80% / 80% | 3.9 / 5.4 |
+| qwen3.5:2b | 0.40.6 | RTX 2080 Super 8 GiB | 1 / 4 | 70% / 70% | 3.8 / 3.6 |
+| qwen3.5:4b | 0.30.6 | RTX 2080 Super 8 GiB | 1 / 4 | 70% / 70% | 38 / 41 |
+| qwen3.5:2b | 0.30.6 | RTX 2080 Super 8 GiB | 1 / 4 | 50% / 50% | 42 / 54 |
+| qwen3-vl:4b | 0.30.6 | RTX 2080 Super 8 GiB | 1 / 4 | 37% / 13% (22 errors) | 88 / 144 |
+| qwen3.5:2b | 0.30.6 | 2 CPUs / 8 GiB container, images only, 1 repeat | 1 | 37.5% | 160 |
 
 Audio (2 cases × 2 repeats, Omni 3B on CPU in float32, Ryzen 9 3900X under WSL2, 31 GiB RAM): 50% pass, p95 104 seconds. It counted the beeps and ruled out speech correctly every time. On the melody case the answer was right, but the model wrapped it in backslash-escaped quotes, so it failed JSON scoring.
 
-No configuration met the 90% / 30-second threshold. Every model failed the small-text and crop cases and the "answer null when absent" abstention case; qwen3.5:4b was the only model to pass the embedded-instruction case on every repeat. A 2-CPU / 8 GiB container run of qwen3.5:2b failed with Ollama connection resets (not an OOM kill), so that profile is not supported. `gemma4:e2b` requires a newer Ollama than 0.30.6 and was not tested.
+On this 10-case set, `gemma4:e2b` (which needs Ollama newer than 0.30.6) was the only configuration to meet the 90% / 30-second threshold, one case ahead of qwen3.5:4b. That lead did not hold on larger sets. With schema-constrained output on Ollama 0.40.6, qwen3.5:4b / qwen3.5:2b / gemma4:e2b scored:
+
+- **128 synthetic screening images:** 95.3% / 90.6% / 80.5%. gemma4 trailed mainly on table comparison and object counting.
+- **27 real-clip regression cases:** 100% / 81.5% / 88.9%.
+
+Both sets were used while developing the qwen3.5 prompts, so they may favour qwen. Neither is a held-out real-media qualification.
+
+The Ollama version matters as much as the model. On 0.40.6, qwen3.5 was about 10× faster than on 0.30.6, and qwen3.5:4b went from 66.7% to 100% on the real-clip set and from 90.6% to 95.3% on the screening set. So rows from different Ollama versions are not directly comparable. On 0.30.6, every model failed the small-text and crop cases and the "answer null when absent" abstention case.
+
+On 2 CPUs / 8 GiB, qwen3.5:2b answers images correctly at the same rate as on the GPU, but each takes about 2 minutes. Peak memory was about 2.6 GB, with no OOM. Video is impractical there: a 12-frame clip is about 9,500 prompt tokens at roughly 8 tokens/s, which is about 20 minutes per request. Ollama keeps working on a request after the client times out, so later requests queue behind it. The earlier "connection reset" failure of this profile did not reproduce. Ollama 0.40.6 logs `find_slot: non-consecutive token position` on qwen3.5 image requests; the requests still succeed, so it can be ignored.
 
 ## Development
 

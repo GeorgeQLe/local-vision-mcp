@@ -35,9 +35,20 @@ def load_manifest(path: Path) -> tuple[dict, list[dict]]:
             or not case["rubric"]["expected"]
         ):
             raise ValueError("Each case needs a nonempty rubric.expected JSON object")
-        request_keys = {"max_tokens", "start", "duration", "frames", "include_audio", "crop"}
+        request_keys = {
+            "max_tokens",
+            "start",
+            "duration",
+            "frames",
+            "include_audio",
+            "crop",
+            "response_schema",
+        }
         if set(case.get("request", {})) - request_keys:
             raise ValueError("Unknown case request option")
+        from ..structured import prepare_schema
+
+        prepare_schema(case.get("request", {}).get("response_schema"))
         source = (path.parent / case["path"]).resolve(strict=True)
         if not source.is_relative_to(path.parent.resolve()) or not source.is_file():
             raise ValueError("Benchmark media must be regular files inside the manifest directory")

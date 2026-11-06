@@ -18,6 +18,7 @@ from .backends import Ollama, Omni
 from .pool import WorkerPool
 from .runtime import Runtime
 from .setup import hardware
+from .structured import prepare_schema, validate_answer
 
 
 class Service:
@@ -55,6 +56,7 @@ class Service:
         include_audio: bool = False,
         crop: list[int] | None = None,
         expected_sha256: str | None = None,
+        response_schema: dict | None = None,
     ):
         if kind not in ("image", "video", "audio"):
             raise ValueError("kind must be image, video or audio")
@@ -66,6 +68,9 @@ class Service:
         needs_omni = kind == "audio" or include_audio or self.config["vision_backend"] == "omni"
         if needs_omni and not self.config["omni_enabled"]:
             raise ValueError("Omni is disabled; install the omni extra and enable it in setup")
+        response_schema = prepare_schema(response_schema)
+        if response_schema is not None and needs_omni:
+            raise ValueError("response_schema requires the Ollama vision backend without audio")
         with self.runtime.lock:
             job = self.runtime.job
             if job and job["state"] == "running" and job["action"] == "update":
@@ -82,6 +87,7 @@ class Service:
                     include_audio,
                     crop,
                     expected_sha256,
+                    response_schema,
                 )
             )
 
@@ -113,6 +119,7 @@ class Service:
         include_audio,
         crop,
         expected_sha256=None,
+        response_schema=None,
     ):
         # Recheck paths when work starts: a queued file may have moved or changed.
         source = media.local_file(path, self.roots)
@@ -157,12 +164,24 @@ class Service:
                 answer = self.omni.analyze(prompt, images, max_tokens, clip)
                 model, metrics = self.config["omni_model"], {}
             else:
-                answer = self.vision.analyze(prompt, images, max_tokens)
+                kwargs = {"response_schema": response_schema} if response_schema is not None else {}
+                answer = self.vision.analyze(prompt, images, max_tokens, **kwargs)
                 model, metrics = self.config["vision_model"], self.vision.last_metrics()
             limit = max_tokens * 8
+            truncated = len(answer) > limit or metrics.get("done_reason") == "length"
+            validation = (
+                {
+                    "output_validation": validate_answer(
+                        answer[:limit], response_schema, truncated=truncated
+                    )
+                }
+                if response_schema is not None
+                else {}
+            )
             return {
+                **validation,
                 "answer": answer[:limit],
-                "truncated": len(answer) > limit,
+                "truncated": truncated,
                 "model": model,
                 "coverage": coverage,
                 "inference": metrics,
@@ -220,9 +239,12 @@ def create_server(service: Service, port: int = 8765) -> FastMCP:
         question: str = "Describe this screenshot and relevant visible text.",
         max_tokens: int = 384,
         crop: list[int] | None = None,
+        response_schema: dict | None = None,
     ) -> dict:
         """Inspect an image. crop is [left, top, right, bottom] in original pixels."""
-        return await service.analyze_async(path, question, "image", max_tokens, crop=crop)
+        return await service.analyze_async(
+            path, question, "image", max_tokens, crop=crop, response_schema=response_schema
+        )
 
     @mcp.tool()
     async def analyze_video(
@@ -233,10 +255,19 @@ def create_server(service: Service, port: int = 8765) -> FastMCP:
         frames: int = 6,
         include_audio: bool = False,
         max_tokens: int = 512,
+        response_schema: dict | None = None,
     ) -> dict:
         """Inspect up to 120 seconds using 1–12 sampled frames. Audio requires Omni."""
         return await service.analyze_async(
-            path, question, "video", max_tokens, start, duration, frames, include_audio
+            path,
+            question,
+            "video",
+            max_tokens,
+            start,
+            duration,
+            frames,
+            include_audio,
+            response_schema=response_schema,
         )
 
     @mcp.tool()
@@ -280,6 +311,7 @@ def create_server(service: Service, port: int = 8765) -> FastMCP:
         frames: int = 6,
         include_audio: bool = False,
         crop: list[int] | None = None,
+        response_schema: dict | None = None,
     ) -> dict:
         """Submit durable analysis. Reuse the same key and request after reconnecting.
 
@@ -300,6 +332,7 @@ def create_server(service: Service, port: int = 8765) -> FastMCP:
                 "frames": frames,
                 "include_audio": include_audio,
                 "crop": crop,
+                "response_schema": response_schema,
             },
             idempotency_key,
         )

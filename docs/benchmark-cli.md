@@ -67,6 +67,40 @@ Mixed native/local comparisons currently exclude audio and videos requesting aud
 `--kind audio` requires every model to use Omni. The report lists exactly which cases were selected.
 This does not establish audio/music parity with native APIs or agents.
 
+## Measure the same CLI agent with and without MCP
+
+`benchmarks/compare.agent-efficiency.json` pairs each CLI/model/reasoning setting with a
+native image arm and a `"perception": "mcp"` arm using `"local_model": "qwen3.5:4b"`.
+The MCP arm receives no pixel attachment. It is explicitly instructed to call the real
+`analyze_image` / `analyze_video` tool through stdio, then answer from its observations.
+The harness requires evidence of a successful analysis call; a discovered tool or a
+status-only call is insufficient. Raw tool arguments and results are preserved for audit.
+
+```bash
+uv run local-vision-bench compare \
+  --manifest benchmarks/generated/compare-01/manifest.json \
+  --config benchmarks/compare.agent-efficiency.json \
+  --output benchmarks/results/agent-efficiency-01 --no-tui
+uv run python -m local_vision_mcp.benchmark.efficiency \
+  benchmarks/results/agent-efficiency-01/report.json
+```
+
+The second command produces `efficiency.json` and `efficiency.md`: paired correctness,
+regressions, host input/output/cache tokens, separate local inference tokens, and latency.
+Compare **total host usage**, including tool discovery and repeated agent steps, rather
+than comparing the local model's token counts with a hosted tokenizer. Missing usage or
+incomplete pairs suppress token reduction claims. Negative reduction means MCP used more.
+
+Each arm starts a fresh isolated CLI session. MCP uses a temporary development
+`--in-process` server with the normal tool surface and a warm shared Ollama runtime;
+only the requested perception tool is preapproved. This includes MCP overhead but does
+not benchmark the shared coordinator. There is no native fallback in the MCP arm.
+These forced-route one-question tasks do not establish autonomous tool adoption or
+whole coding-agent productivity. Related synthetic cases are exploratory evidence;
+freeze representative held-out real workloads and a quality margin before claiming parity.
+
+Codex tool policy follows the [official MCP configuration reference](https://learn.chatgpt.com/docs/extend/mcp).
+
 ## Costs and budget estimates
 
 Local provider fees are zero; GPU hardware and electricity costs are excluded. Claude can report
@@ -125,7 +159,24 @@ Strict correctness means every expected field matches the deterministic rubric; 
 also shows partial correctness. Invalid JSON and provider errors score zero. Truncated local
 answers cannot pass. These measurements cover the selected labeled tasks, not general perception
 parity. Freeze representative held-out scenes before using the results to choose a model or
-fallback policy. Consensus, native escalation and paired confidence intervals remain future work.
+fallback policy. An experimental image-only [consensus benchmark](consensus-benchmark.md)
+adds `local_strategy: "consensus"` and an optional second local replica through
+`consensus_peer_url`. It retains individual answers in private local audits and reports
+wrong unanimous answers as well as task accuracy. Native escalation and paired confidence
+intervals remain future work.
+
+For per-task first-local accuracy, host repairs, formatting failures and paired usage,
+see [task routing and model qualification](vision-task-routing.md). Its reusable
+`benchmark.task_gap` report reads completed runs without starting inference. The saved
+protocol describes how to qualify future models and a hybrid router on new held-out
+workloads; it does not activate routing or treat model agreement as confidence.
+The [real-video pilot](video-benchmark.md) adds matched still controls and separate
+sampling-gap diagnostics via `benchmark.video_report`.
+
+The [structured-output screening](structured-output-benchmark.md) adds optional
+`response_schema`, fresh candidate-task scenes, identical contract scoring across
+providers, and executable `perception: "shadow"` workflow measurements. Shadow
+mode keeps native primary and reports local/hosted usage separately.
 
 Adapter references: [Codex non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode),
 [Claude headless mode](https://code.claude.com/docs/en/headless),

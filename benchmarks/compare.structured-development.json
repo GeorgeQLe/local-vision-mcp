@@ -1,0 +1,14 @@
+{
+  "models": [
+    {
+      "name": "Local Qwen structured",
+      "backend": "ollama",
+      "model": "qwen3.5:4b",
+      "url": "http://127.0.0.1:11435",
+      "ollama_options": {
+        "num_ctx": 16384
+      },
+      "structured_output": true
+    }
+  ]
+}

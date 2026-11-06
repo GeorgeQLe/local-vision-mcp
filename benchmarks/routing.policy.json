@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "mode": "native_default_with_explicit_local_shadow",
+  "reference_model": "qwen3.5:4b",
+  "reference_model_digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+  "qualified_local_tasks": [],
+  "shadow_candidates": [
+    "clear_large_text_ocr",
+    "small_separated_object_counting",
+    "explicit_visible_labeled_fields",
+    "simple_table_comparison_with_schema_validation"
+  ],
+  "native_required_tasks": [
+    "tiny_exact_identifiers",
+    "dense_table_exact_row_extraction",
+    "optional_field_presence_or_absence",
+    "ambiguous_labels_or_incomplete_coverage"
+  ],
+  "qualified_modalities": [],
+  "shadow_modalities": ["image"],
+  "notes": "Video and unknown models/tasks remain native by default. Shadow results do not replace the native answer. Promotion requires independent held-out quality and end-to-end efficiency evidence."
+}

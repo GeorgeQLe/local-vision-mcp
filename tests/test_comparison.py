@@ -13,7 +13,14 @@ from rich.console import Console
 
 from local_vision_mcp.benchmark import suite
 from local_vision_mcp.benchmark.dashboard import aggregate, render
-from local_vision_mcp.benchmark.providers import cli_request, parse_events, run_process, token_cost
+from local_vision_mcp.benchmark.providers import (
+    Provider,
+    cli_request,
+    mcp_evidence,
+    parse_events,
+    run_process,
+    token_cost,
+)
 
 
 @pytest.fixture
@@ -112,6 +119,7 @@ def test_cli_payload_contains_pixels_without_ground_truth(case, tmp_path, backen
         assert argv[argv.index("--image") + 1] == str(tmp_path / "frame-0.png")
         assert "--ignore-user-config" in argv
         assert "features.shell_tool=false" in argv
+        assert "tools.view_image=false" in argv
         assert argv[-1] == "-"
     assert Image.open(io.BytesIO(image)).size == (20, 20)
     assert provenance["image_sha256"] == [hashlib.sha256(image).hexdigest()]
@@ -143,6 +151,104 @@ def test_subprocess_deadline_cancel_and_redaction(tmp_path):
             stop,
         )
     assert "SECRET" not in str(error.value)
+
+
+def test_large_image_input_survives_a_delayed_reader(tmp_path):
+    payload = "base64-image-data" * 131072
+    argv = [
+        sys.executable,
+        "-c",
+        (
+            "import hashlib,sys,time; time.sleep(.25); data=sys.stdin.buffer.read(); "
+            "print(len(data),hashlib.sha256(data).hexdigest())"
+        ),
+    ]
+    result = run_process(argv, payload, tmp_path, 3, threading.Event()).strip()
+    assert result == f"{len(payload.encode())} {hashlib.sha256(payload.encode()).hexdigest()}"
+
+
+def test_local_provider_applies_requested_inference_options(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "local_vision_mcp.benchmark.runner.ollama_metadata", lambda service: {"local": True}
+    )
+    candidate = {
+        "name": "local",
+        "backend": "ollama",
+        "model": "test",
+        "ollama_options": {"num_ctx": 4096, "temperature": 0.25},
+    }
+    provider = Provider(candidate, tmp_path, 15, threading.Event())
+    try:
+        assert provider.service.vision.options["num_ctx"] == 4096
+        assert provider.service.vision.options["temperature"] == 0.25
+    finally:
+        provider.close()
+
+
+@pytest.mark.parametrize("backend", ["codex", "claude"])
+def test_mcp_arm_has_no_pixel_attachment_and_only_preapproves_analysis(case, tmp_path, backend):
+    candidate = {**model(backend), "perception": "mcp", "local_model": "qwen3.5:4b"}
+    argv, stdin, provenance = cli_request(candidate, case, tmp_path)
+    assert "GROUND_TRUTH_SECRET" not in stdin
+    assert provenance["perception"] == "mcp"
+    if backend == "codex":
+        assert "--image" not in argv
+        assert 'mcp_servers.local-vision.tools.analyze_image.approval_mode="approve"' in argv
+        assert "mcp_servers.local-vision.required=true" in argv
+        prompt = stdin
+    else:
+        content = json.loads(stdin)["message"]["content"]
+        assert [block["type"] for block in content] == ["text"]
+        assert argv[argv.index("--allowedTools") + 1] == "mcp__local-vision__analyze_image"
+        server = json.loads(argv[argv.index("--mcp-config") + 1])["mcpServers"]["local-vision"]
+        assert "--in-process" in server["args"]
+        prompt = content[0]["text"]
+    assert json.dumps(case["request"]["crop"]) in prompt
+    assert case["path"] in prompt
+
+
+def test_mcp_evidence_rejects_advertised_failed_and_unrelated_calls():
+    call = {
+        "type": "mcp_tool_call",
+        "server": "local-vision",
+        "tool": "analyze_image",
+        "status": "completed",
+        "result": {"content": []},
+        "error": None,
+    }
+    event = lambda item: json.dumps({"type": "item.completed", "item": item})
+    assert mcp_evidence("codex", event(call), "image")["mcp_successful_calls"] == 1
+    for output in (
+        "",
+        event({**call, "tool": "local_media_status"}),
+        event({**call, "status": "failed", "error": {"message": "denied"}}),
+        event({**call, "result": {"isError": True}}),
+    ):
+        with pytest.raises(RuntimeError, match="No successful"):
+            mcp_evidence("codex", output, "image")
+    use = {
+        "type": "assistant",
+        "message": {
+            "content": [
+                {"type": "tool_use", "id": "call-1", "name": "mcp__local-vision__analyze_image"}
+            ]
+        },
+    }
+    result = {
+        "type": "user",
+        "message": {
+            "content": [{"type": "tool_result", "tool_use_id": "call-1", "content": "report"}]
+        },
+    }
+    assert (
+        mcp_evidence("claude", json.dumps(use) + "\n" + json.dumps(result), "image")[
+            "mcp_successful_calls"
+        ]
+        == 1
+    )
+    result["message"]["content"][0]["is_error"] = True
+    with pytest.raises(RuntimeError, match="No successful"):
+        mcp_evidence("claude", json.dumps(use) + "\n" + json.dumps(result), "image")
 
 
 class FakeProvider:
@@ -217,6 +323,22 @@ def test_errors_are_failed_cases_and_cost_is_unknown(case, tmp_path):
     assert stats["accuracy"] == 0
 
 
+def test_failed_mcp_validation_preserves_consumed_usage(case):
+    class MissingCall:
+        def analyze(self, public):
+            return {
+                "answer": '{"color":"red"}',
+                "error": "No successful local-vision perception tool call recorded",
+                "usage": {"input_tokens": 123, "output_tokens": 10},
+            }
+
+    case["rubric"]["expected"]["color"] = "red"
+    row = suite.evaluate(MissingCall(), model(), case, 0)
+    assert not row["grade"]["passed"]
+    assert row["grade"]["score"] == 0
+    assert row["usage"]["input_tokens"] == 123
+
+
 def test_interrupt_drains_and_preserves_partial_results(case, tmp_path, monkeypatch):
     real_wait = suite.wait
     first = True
@@ -279,6 +401,9 @@ def test_shared_case_selection_and_config_validation(case, tmp_path):
         {"models": [{**model(), "pricing": {"input": -1}}]},
         {"models": [{**model(), "pricing": {"typo": 1}}]},
         {"models": [{**model(), "estimated_tokens": {"typo": 1}}]},
+        {"models": [{**model(), "perception": "unknown"}]},
+        {"models": [{**model(), "perception": "mcp"}]},
+        {"models": [{**model("ollama"), "perception": "mcp", "local_model": "local"}]},
     ):
         path.write_text(json.dumps(value))
         with pytest.raises(ValueError):
